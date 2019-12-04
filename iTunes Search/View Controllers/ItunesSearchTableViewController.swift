@@ -34,12 +34,15 @@ class ItunesSearchTableViewController: UITableViewController, UISearchBarDelegat
             break
         }
         
-        searchResultController.performSearch(for: searchTerm, resultType: resultType) {
+        searchResultController.performSearch(baseURL: searchResultController.baseURL, for: searchTerm, resultType: resultType, networkDownloader: URLSession.shared) {
+            
             DispatchQueue.main.async {
                 self.tableView.reloadData()
             }
         }
     }
+        
+        
     
     // MARK: - Table view data source
 

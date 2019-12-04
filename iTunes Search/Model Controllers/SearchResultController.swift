@@ -10,8 +10,9 @@ import Foundation
 
 class SearchResultController {
     
-    func performSearch(for searchTerm: String, resultType: ResultType, completion: @escaping () -> Void) {
+    func performSearch(baseURL: URL, for searchTerm: String, resultType: ResultType, networkDownloader: NetworkDownloaderProtocol, completion: @escaping () -> Void) {
         
+        // Creating URL components.
         var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: true)
         let parameters = ["term": searchTerm,
                           "entity": resultType.rawValue]
@@ -20,26 +21,32 @@ class SearchResultController {
         
         guard let requestURL = urlComponents?.url else { return }
 
+        // Creating URL request using the url components.
         var request = URLRequest(url: requestURL)
         request.httpMethod = HTTPMethod.get.rawValue
         
-        let dataTask = URLSession.shared.dataTask(with: request) { (data, _, error) in
-            
-            if let error = error { NSLog("Error fetching data: \(error)") }
-            guard let data = data else { completion(); return }
-            
-            do {
-                let jsonDecoder = JSONDecoder()
-                let searchResults = try jsonDecoder.decode(SearchResults.self, from: data)
-                self.searchResults = searchResults.results
-            } catch {
-                print("Unable to decode data into object of type [SearchResult]: \(error)")
+        networkDownloader.executeRequestAsynchronously(request: request) { (possibleData, possibleError) in
+            // Validate accurate information.
+                if let error = possibleError { NSLog("Error fetching data: \(error)") }
+                guard let data = possibleData else { completion(); return }
+                
+                do {
+                    // Parse Data
+                    let jsonDecoder = JSONDecoder()
+                    let searchResults = try jsonDecoder.decode(SearchResults.self, from: data)
+                    
+                    // Save Data
+                    self.searchResults = searchResults.results
+                } catch {
+                    print("Unable to decode data into object of type [SearchResult]: \(error)")
+                }
+                
+                // Notify the caller that we're done
+                completion()
             }
-            
-            completion()
         }
-        dataTask.resume()
-    }
+        
+        
     
     let baseURL = URL(string: "https://itunes.apple.com/search")!
     var searchResults: [SearchResult] = []
